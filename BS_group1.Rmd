@@ -1,0 +1,300 @@
+---
+title: "Bayesian Network Modelling"
+author: "Emily Koskinen, Jazmine Pajar, Vanessa Zyto, Giorgia Bonin, Ping-Chieh Ke"
+date: "2024-06-28"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### 1. Introduction & basics
+
+***1.a How do you interpret the absence of an edge between variables A and I?(0.5pts)***
+
+The absence of an edge between variables A and I shows there is no direct association or dependency between these two variables. This signifies that A and I are conditionally independent. Thus, when we condition on S in the network model, A and I are not statistically associated.
+
+<br>
+
+***1b: Give a general definition about what the edges in these networks indicate (0.5 pts)***
+
+Edges represent the direct probabilistic dependencies or statistical associations between the variables which are represented by the nodes. For network plots the thickness of the edges represent the strength of the association.
+
+<br>
+
+***1c: Can you give another example from psychology where this might be useful? Your example needs to have at least four variables. (0.5 pts)***
+
+We could use network models to understand which symptoms are important for Obsessive-Compulsive Disorder (OCD) to better inform future interventions. 
+
+An example of general variables that could cover all the different aspects of OCD symptoms and can be represented as nodes within a network model: 
+
+1.Obsession: defined as persistent, intrusive, and unwanted thoughts, images, or urges that cause distress or anxiety.
+
+2.Compulsions: defined as repetitive behaviors or mental acts that an individual feels driven to perform in response to an obsession or according to rigid rules.
+
+3.Emotional and behavioral symptoms: represent emotional responses (e.g., anxiety, guilt).
+
+4.Physical symptoms: physical manifestations related to OCD, such as tension, headaches, or other somatic symptoms.
+
+5.Cognitive symptoms: cognitive processes affected by OCD, such as impaired concentration, indecisiveness, or intrusive thoughts impacting reasoning.
+
+According to the DSM obsession and compulsions are core symptoms of OCD. By performing a network analysis we could test this hypothesis by looking at the centrality of the nodes within the network. Similarly, we could test the statistical relation between the other observed symptoms to have a better understanding of the disorder. 
+
+
+<br>
+
+***How many possible structures are there in a network with 3 variables? Can you give a general rule for p variables? (0.5 pts)***
+
+In a network with 3 variables, there are 8 possible structures. A general rule for finding the amount of possible structures for $p$ variables is to first calculate the possible number of edges, $k = p(p-1)/2$. Each edge can be either present or absent. Therefore the number of possible structures would equal to $2^k$. 
+ 
+$$ k = \frac{p(p-1)} 2 $$
+<br>
+<br>
+
+### 2. Estimate a real network model
+
+```{r, eval=TRUE, warning=FALSE}
+library(BGGM)
+library(easybgm)
+
+data("depression_anxiety_t1")
+data <- depression_anxiety_t1[, 1:10]
+
+set.seed(123)
+output<-easybgm(data = data, type = "ordinal", save = TRUE)
+
+```
+
+<br>
+
+***2.a Give a general description of the output of this function. What are the most important aspects to interpret? (0.5pts)***
+
+```{r}
+set.seed(123)
+summary(output)
+```
+
+The output of the `easybgm` function provides an overview of the results for the network estimation. This includes edge-specific information in the form of the Posterior Parameter Estimate, which is the estimated strength of the relationship between nodes; the Posterior Inclusion Probability (PIP), indicating the probability (0-1) that an edge is present given the data; and the Inclusion Bayes Factor (BF), which equals the odds ratio of the posterior inclusion odds over the prior inclusion odds (Huth et al., 2024). It shows the support for including the edge, with thresholds set at BF10 > 10 for inclusion and BF01 < 1/10 for exclusion. Edges are categorized as included, excluded, or inconclusive based on these thresholds and as such they represent certainty about the structure of the network. Additionally, the summary shows the total number of edges with sufficient or insufficient evidence for inclusion or exclusion of the edges as well as an overview of the possible network structures including the posterior probability of the most likely structure.
+
+<br>
+
+***2.b Analyze the relationship between PHQ6 and GAD1, look at the description of the data set to see what the variables mean. What do the posterior estimates tell you? How would you interpret this result? Also, can you give a rough definition of what the posterior inclusion probability means? (1pt)***
+
+```{r, warning=FALSE}
+set.seed(123)
+output$parameters[6,10] # parameter estimate PHQ6-GAD1 edge
+output$inc_BF[6,10] # Inclusion Bayes-factor PHQ6-GAD1 edge
+output$inc_probs[6,10] # posterior inclusion probability PHQ6-GAD1 edge
+
+```
+PHQ6 and GAD1 represent symptoms of depression and anxiety respectively, measured in a 4-point likert scale. More specifically PHQ6 is the response to the item: ‘ Feeling bad about yourself — or that you are a failure or have let yourself or your family down?’ and GAD1 is the response to:  ‘Feeling nervous, anxious, or on edge’.
+
+Posterior Inclusion Probability (PIP) for the relationship of PHQ6 and GAD1 is 1, suggesting that we can be confident about including the edge in the network. The inclusion Bayes Factor (BF10) is equal to Inf, exceeding the threshold and so indicates there is strong evidence for the inclusion of the edge. The estimated weight value parameter for the edge is roughly 0.46 which represents a positive association between the items and a moderately strong association in relation to other edge weight parameters. The higher the absolute value of the estimated weight value parameter the stronger is the association  (Huth et al., 2024). 
+
+Posterior Inclusion Probability (PIP) is the sum of the posterior probabilities of all the models that include the edge (Sekulovsky et al., 2024). The closer PIP is to 1, the more confident one can be about the inclusion of the edge, while if the PIP is closer to 0, then there’s more confidence for the exclusion of the edge. It indicates how likely it is for the edge to exist within the network and the higher the value, the more important the edge is for the structure of the network.
+
+\vspace{5mm}
+<br>
+<br>
+
+### 3.Edge evidence - The inclusion Bayes factor 
+
+***3.a Give a general interpretation of the edge evidence plots. What do they depict? What do the different edge colors mean? Can you think of a way in which these plots would change if you alter the way you analyze the data? (1pt)***
+
+```{r,warning=FALSE}
+set.seed(123)
+
+par(mfrow=c(1,2))
+plot_edgeevidence(output, split = TRUE)
+```
+
+
+The edge evidence plots depict the associations between the nodes. Red edges indicate evidence for edge absence (conditional independence) and blue edges indicate evidence for edge presence (conditional dependence). If an edge is gray it means that there is not enough evidence (inconclusive) to say whether the edge can be included or not in the network.This signifies that there is an absence of evidence for the inclusion of nodes. 
+
+These plots can be changed by modifying the inclusion Bayes Factor threshold (from default of 10, to e.g. 1) which specifies if the edges are included or excluded in the network. For example, the BF threshold of 1 would indicate that we include edges if we have evidence that the alternative hypothesis is one time more likely (rather than 10 times more likely) than the null hypothesis. This in turn, results in the inclusion of more edges in the network. Another way to change the plot would be by choosing different priors for the structure and/or the edge weights, which in turn affect the posterior distribution of the estimate.
+
+
+<br>
+
+***3.b Pick one edge that you think is of substantial interest and interpret its inclusion Bayes factor. (0.5pts)***
+
+```{r}
+#PHQ1-PHQ2 edge
+set.seed(123)
+output$parameters[1,2]
+output$inc_probs[1,2]
+output$inc_BF[1,2]
+```
+
+We picked the edge between PHQ1 (Little interest or pleasure in doing things) and PHQ2 (Feeling down, depressed, or hopeless).
+
+The edge between nodes: PHQ1 and PHQ2 is of substantial interest as they have the thickest line in the edge evidence plots and their Inclusion Bayes Factor is Infinite meaning it is very large thus it is very certain that this edge is to be included. Practically, this suggests that we can assume an association between feeling down/depressed and little interest and pleasure. The weight estimate for the edge between these items is also the highest (1.112), suggesting that it is the the strongest edge in the network structure. 
+
+<br>
+
+***3c. Use the plot_network function to visually inspect the edge weight parameters for the present edges. Briefly comment on the results. (0.5pts)***
+
+```{r,warning=FALSE}
+set.seed(123)
+plot_network(output, dashed= TRUE)
+```
+
+The edge weights of present edges can be visualized with the network plot. By default, exc_prob excludes all edges with a posterior inclusion probability less than 0.5. Each node represents a specific item from the questionnaires, and the edges (lines connecting the nodes) represent the strength of the associations between these items. The thickness and color intensity indicate the strength of the relationship between variables. Thicker, darker lines represent stronger relationships between variables (e.g. relationship between PHQ2 and PHQ1), and thinner, lighter edges represent weaker associations (e.g. PHQ8 and PHQ6). Moreover, dashed lines represent insufficient evidence to include them in a network, in accordance with Bayes Factor being smaller than 10. As can be seen on the plot, there is a strong association between PHQ1 and PHQ2. Moreover, there is a moderate association between: PHQ3 and PHQ4, PHQ2 and PHQ9, PHQ8 and PHQ9 as well as PHQ1 and PHQ4.
+
+
+<br>
+<br>
+
+### 4. Prior Sensitivity
+
+***4.a In the first part you will focus on the prior for the edge weight parameters by repeating the analysis from Q2 using a Cauchy (0, 1) prior. To change the scale, use the interaction_scale argument.***
+
+```{r}
+#analysis with prior Cauchy(0,1)
+
+set.seed(123)
+output1<-easybgm(data,type="ordinal", interaction_scale=1, save=TRUE)
+```
+
+<br>
+
+***4.a.1 Plot the univariate posterior distribution of a single edge weight parameter from the results of this analysis together with the posterior distribution of the same edge weight from the first analysis (Q2). Briefly describe the difference between the two posteriors. (0.5pts)***
+
+```{r, warning=FALSE}
+library(ggplot2)
+
+# edge weight of GAD1 and PHQ6
+set.seed(123)
+par(mfrow=c(1,2))
+posterior_samples_2.5<-output$samples_posterior[, 39]
+posterior_samples_1<-output1$samples_posterior[, 39]
+
+df_2.5 <- data.frame(samples = posterior_samples_2.5, scale = "Cauchy(0, 2.5)")
+df_1 <- data.frame(samples = posterior_samples_1, scale = "Cauchy(0, 1)")
+
+# Combine data frames
+df <- rbind(df_2.5, df_1)
+
+# Plot using ggplot2
+ggplot(df, aes(x = samples, fill = scale)) +
+  geom_density(alpha = 0.5) +
+  labs(title ="Posterior Distributions of Single Edge Weight(GAD1-PHQ6)",
+       x = "Edge Weight",
+       y = "Density") +
+  theme_minimal()
+
+#edge weight of PHQ4 and PHQ6
+set.seed(123)
+posterior_samples_2.5<-output$samples_posterior[, 26]
+posterior_samples_1<-output1$samples_posterior[, 26]
+df_2.5 <- data.frame(samples = posterior_samples_2.5, scale = "Cauchy(0, 2.5)")
+df_1 <- data.frame(samples = posterior_samples_1, scale = "Cauchy(0, 1)")
+
+# Combine data frames
+df <- rbind(df_2.5, df_1)
+
+# Plot using ggplot2
+ggplot(df, aes(x = samples, fill = scale)) +
+  geom_density(alpha = 0.5) +
+  labs(title ="Posterior Distributions of Single Edge Weight(PHQ4-PHQ6)",
+       x = "Edge Weight",
+       y = "Density") +
+  theme_minimal()
+```
+
+
+The univariate posterior distribution derived from the Cauchy(0,1) prior mostly overlaps with the posterior distribution obtained from the default prior, Cauchy(0, 2.5). In most cases, when the parameter value is at 0, the posterior distribution from the default prior (Cauchy(0, 2.5)) is more peaked than the posterior distribution from the Cauchy(0, 1) prior. This can be seen in the edge weight of PHQ4 and PHQ6. In other cases however, the posterior distribution from the default prior (Cauchy(0,2.5)) may not be more peaked; for example in the edge weight of GAD1 and PHQ6. 
+
+<br>
+
+***4.a.2 Obtain the edge evidence plots. Compare them with the edge evidence plots from the first analysis (Q3). Also compare the inclusion Bayes factor for the single edge as in Q3.b.(0.5pts)***
+
+```{r}
+set.seed(123)
+par(mfrow=c(2,2))
+plot_edgeevidence(output, split = TRUE) # Edge evidence plot (prior Cauchy (0,2.5))
+plot_edgeevidence(output1, split = TRUE) # Edge evidence plot (prior Cauchy (0,1))
+
+
+# comparing inclusion BF for PHQ1-PHQ3 edge
+output$inc_BF[1,3]
+output1$inc_BF[1,3]
+
+```
+
+The edge evidence plots from the first analysis (using Cauchy(0, 2.5) as prior) shows more excluded edges (red lines), whereas the edge evidence plots from this analysis (using Cauchy (0, 1) as prior) shows more inconclusive edges (gray lines).
+
+In general, the inclusion Bayes Factor increases for the relations between variables when using the Cauchy (0,1) prior compared to the Cauchy (0, 2.5) prior, indicating a shift of some edges from excluded to inconclusive and from inconclusive to included. For example, the inclusion Bayes Factor for the relation between PHQ1 and PHQ3 changes from 0.043 to 0.172, which in turn means that the edge evidence changes from evidence of absence (excluded from the network) to the absence of evidence (inconclusive evidence). In the same way, the edge which was considered inconclusive using Cauchy (0, 2.5) prior, may change to evidence for inclusion when using Cauchy (0, 1) prior.
+
+<br>
+
+***4.a.3 Can you give a general conclusion about how the scale of the Cauchy distribution affects the inclusion Bayes factor?***
+
+The scale of the Cauchy distribution affects the inclusion Bayes factor by influencing the prior distribution of the edge weight. A larger scale parameter has a wider range of plausible values which suggests more uncertainty as it affects the strength of evidence for or against the inclusion of the parameter in the model. Intuitively, we would expect that with a Cauchy(0, 1) distribution that is more peaked around 0, the parameter values around 0 would have a higher posterior density and parameter values away from it would have a lower posterior density as compared to parameter calculated from a Cauchy (0, 2.5). However, as shown in the plots, the number of edges with insufficient evidence increased when the scale of the Cauchy distribution was changed to (0,1), which is known as the Lindley’s paradox. This happens because the Bayes Factor embodies Occam’s razor, which penalizes more complex models. A Cauchy (0, 2.5) is more complex because it allows for more parameter values, therefore the Bayes Factor of edges that comes from a Cauchy(0, 2.5) is overall lower, resulting in more edges passing the threshold of exclusion.
+
+<br>
+
+***4.b In this second part you will focus on the prior for the network structure by repeating the analysis from Q2, using a Beta-Bernoulli prior (keep the default choice for the scale of the Cauchy prior the same, that is Cauchy (0, 2.5)). In order to change the prior on the network structure set the argument edge_prior= "Beta-Bernoulli".***
+
+```{r}
+set.seed(123)
+output_bernoulli<-easybgm(data = data, type = 'ordinal', save = TRUE, edge_prior = "Beta-Bernoulli")
+```
+<br>
+
+
+***Q 4.b.1 Summarize the results and look at the posterior inclusion probabilities, compare them with the results from the first analysis (Q2). Briefly comment on the differences? (0.5pts)***
+
+```{r}
+set.seed(123)
+summary(output_bernoulli)
+```
+
+The posterior inclusion probabilities do not differ significantly but if they are not equal to 1, then when using Beta Bernoulli prior they usually slightly increase.
+
+<br>
+
+***4.b.2 Can you make a general statement about the difference between the Bernoulli (uniform) and Beta-Bernoulli priors? How do the two differ in distributing the probability mass over the possible structures? Which one would you prefer for your analysis and why? (1pt)***
+
+Bernoulli (uniform) distribution assumes equal probability for each possible structure or outcome. In contrast, Beta Bernoulli distribution assigns equal probability among different structure complexities and then further divides those probability between each possible outcome with that complexity. The difference between the Bernoulli and Beta-Bernoulli priors is in the way Bernoulli distribution is uniform while the Beta-Bernoulli can take structure’s complexity into account. 
+
+The Bernoulli prior distributes the probability mass equally over all possible structures and outcomes. While the Beta- Bernoulli Distribution, also called the hierarchical prior, takes the complexity of the structure in account by assigning equal probability among different structure complexities and then further divides those probability between each possible outcome with that complexity. 
+
+Bernoulli (uniform) might be preferred when there is no prior knowledge about the likelihoods of possible outcomes. Bete-Bernoulli by specifying a and b parameters, allows us to incorporate our prior beliefs into analysis. For our analysis, the Beta-Bernoulli would be preferred in our case, as we already have prior beliefs regarding the variables, as we know anxiety and depression symptoms often overlap. 
+
+<br>
+<br>
+
+### 5. Conclusion 
+
+<br>
+
+***5.a Suppose you are a researcher interested in investigating how the symptoms of anxiety and depression are related in order to inform clinical practice about what to focus on in therapy. Give a summary of your analysis, including both the statistical description of the analysis (including graphs) and a substantive interpretation that clinicians can understand. This is the main task of your presentation. (4pts)***
+
+We performed the ‘easybgm’ analysis using different priors. First, we used the default prior for edge parameters, which is Cauchy prior (0,2.5). Second, we used the prior for edge parameters to be Cauchy(0, 1). Lastly, we compared the effect of the Beta-Bernoulli prior distribution to the Bernoulli prior distribution for network structure (with the default Cauchy (0, 2.5) for edge parameters).
+
+Our analysis of edge evidence provided evidence for the exclusion of the edge between GAD1(feeling anxious) and PHQ9 (suicidal thoughts). While it provided evidence for the inclusion of the edge between GAD1 and PHQ2 and PHQ3 which mean, respectively sleep problems and  loss of energy. Our analysis provides strong evidence for the inclusion (inclusion BF = Inf) of the edge between GAD1(feeling anxious) and PHQ4(feeling tired, having no energy) and PHQ6 (feeling bad about oneself). Therefore, results of the analysis provide valuable insights into the interaction of anxiety and specific depression symptoms, which in turn may allow for more tailored treatment.
+
+Moreover, we contrasted the effect of different priors, Cauchy(0, 2.5) with the Cauchy prior (0,1), where the latter resulted in higher inclusion Bayes Factors and so more inconclusive edges at the expense of less excluded edges. When applying this to clinical practice, using Cauchy prior with smaller scale parameters would imply a “safer” approach in the sense that edges are not easily excluded, and we exclude items/symptoms with caution and so only when there is strong evidence to do so. 
+
+The Beta-Bernoulli prior resulted in greater inclusion probabilities. However, the increase is rather marginal. Although considering Beta-Bernoulli might be more sensible when you have previous information on the fact that anxiety symptoms and depression symptoms often overlap, it might be better to use an informed Beta-Bernoulli than a uniform Bernoulli prior. However, we came across a software problem, which produced NaN’s for the Inclusion Bayes Factor. 
+
+Overall the clinical implication of this is shedding light into the overlapping and interconnected symptoms of anxiety and depression. By doing this we can ensure a more holistic approach to treatment. For example, when treating anxiety, it’s important to consider depression symptoms as well, and vice versa. Not only that, it is also possible to create more focused treatment plans by considering the more central symptoms. By integrating this knowledge, clinicians can create treatment plans that address all of a patient's symptoms, leading to better treatment outcomes and overall mental health.
+
+While a single analysis like ours cannot definitively establish the relationship between anxiety and depression symptoms, it can provide valuable support and enhance our understanding of mental health, thereby helping to improve treatment development in this area.
+
+<br>
+
+***5.b Throughout the assignment you have seen first hand the benefits of Bayesian estimation of network models. Your last task is to briefly summarise these advantages. (2pts)***
+
+Bayesian estimation of network models is a tool that helps us to derive sound, inferential conclusions and allows for the quantification of three types of uncertainty:
+
+1. Structure uncertainty (number of visited structures): By quantifying the uncertainty associated with different structures, Bayesian estimation helps in assessing the confidence we can place in the selected model.
+
+2. Evidence for edge inclusion or exclusion (inclusion Bayes Factor): Bayesian estimation provides evidence for the inclusion or exclusion of edges in the network, distinguishing between evidence of absence (i.e. red edges) and absence of evidence (i.e. gray edges), allowing for evidence for conditional independence. This supports more informed decision-making.
+
+3. Uncertainty of association parameters between variables of a network (credible intervals): Posterior densities help capture parameter uncertainty, where narrow credible intervals indicate stable parameters and wide intervals indicate unstable parameters. It overall helps us know how stable the association parameters are. 
+
+Additionally, Bayesian estimation of network models allows the handling of complex models and their visualization in a clear manner that helps to interpret the conclusions in a coherent way and make sound decisions based on them. Incorporating prior knowledge through different priors also allows to account for complex models as well as small samples leading to reliable and stable results.
+
+<br>
+<br>
