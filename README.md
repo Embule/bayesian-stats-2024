@@ -1,4 +1,5 @@
-### A group project and an individual assignment from Bayesian statistics course 2024
+### 1. A group project on Bayesian network analysis 
+### 2. Individual assignment from Bayesian statistics course 2024
 
-Link to the group project:
+
 
